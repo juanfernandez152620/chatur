@@ -8,6 +8,7 @@ import { useState } from 'react';
 export default function Chat() {
   const [input, setInput] = useState('');
   const { messages, sendMessage } = useChat();
+
   return (
     <div className="flex flex-col w-full max-w-md py-24 mx-auto stretch">
       {messages.map(message => (
@@ -17,11 +18,20 @@ export default function Chat() {
             switch (part.type) {
               case 'text':
                 return <div key={`${message.id}-${i}`}>{part.text}</div>;
+              // 👇 Esta es la línea que cambia
+              case 'tool-weather':
+              case 'tool-convertFahrenheitToCelsius':
+                return (
+                  <pre key={`${message.id}-${i}`}>
+                    {JSON.stringify(part, null, 2)}
+                  </pre>
+                );
             }
           })}
         </div>
       ))}
 
+      {/* El formulario se mantiene igual */}
       <form
         onSubmit={e => {
           e.preventDefault();
