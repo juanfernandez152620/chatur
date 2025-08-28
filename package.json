@@ -8,9 +8,13 @@
     "start": "next start"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.22",
+    "@ai-sdk/react": "^2.0.27",
+    "ai": "^5.0.27",
+    "next": "15.5.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.2"
+    "zod": "^4.1.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
