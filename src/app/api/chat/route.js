@@ -16,24 +16,70 @@ export async function POST(req) {
   const result = streamText({
     model: openai('gpt-4o-mini'),
     messages: convertToModelMessages(messages),
+    toolChoice: 'required',
     tools: {
-      // --- INICIO DE LA NUEVA HERRAMIENTA: ConsultarArticulos ---
+      // ConsultarArticulos: tool({
+      //   description: 'Busca artículos o notas en el sitio web. Se puede buscar por un término clave y opcionalmente filtrar por una localidad.',
+      //   inputSchema: z.object({
+      //     busqueda: z.string().describe('La palabra o frase a buscar en los artículos. Por ejemplo: "gastronomía", "humita".'),
+      //     localidad: z.string().optional().describe('Filtra los artículos por una localidad específica de tucuman de esta lista: san miguel de tucumán, yerba buena, tafí del valle, el cadillal, san javier.')
+      //   }),
+      //   execute: async ({ busqueda, localidad }) => {
+      //     // Reutilizamos el mismo mapa de localidades
+      //     const localidadMap = {
+      //       'san miguel de tucumán': 1,
+      //       'yerba buena': 58,
+      //       'tafí del valle': 51,
+      //       'el cadillal': 62,
+      //       'san javier': 56,
+      //     };
+          
+      //     // Reemplaza '[URL_DE_TU_API]' si es diferente
+      //     const baseUrl = 'https://tucumanturismo.gob.ar/api/v1/api/buscador';
+      //     const params = new URLSearchParams();
+
+      //     // Parámetros fijos y obligatorios
+      //     params.append('limit', '10');
+      //     params.append('offset', '0');
+      //     params.append('idioma', 'ES'); // Fijamos el idioma en Español
+
+      //     // Parámetro de búsqueda obligatorio
+      //     params.append('busqueda', busqueda);
+          
+      //     if (localidad) {
+      //       const normalizedLocalidad = localidad.toLowerCase();
+      //       const localidadId = localidadMap[normalizedLocalidad];
+      //       if (localidadId) {
+      //         params.append('localidad', localidadId.toString());
+      //       } else {
+      //         return { error: `La localidad "${localidad}" para filtrar artículos no es válida.` };
+      //       }
+      //     }
+
+      //     console.log(`Parámetros de la solicitud: ${params.toString()}`);
+      //     const fullUrl = `${baseUrl}?${params.toString()}`;
+      //     console.log(`Fetching Artículos: ${fullUrl}`);
+
+      //     try {
+      //       const response = await fetch(fullUrl);
+      //       if (!response.ok) {
+      //         throw new Error(`Error de red: ${response.statusText}`);
+      //       }
+      //       const data = await response.json();
+      //       return data.result; 
+      //     } catch (error) {
+      //       console.error('Error al llamar a la API de artículos:', error);
+      //       return { error: 'No se pudo conectar con el servicio de búsqueda de artículos.' };
+      //     }
+      //   },
+      // }),
+
       ConsultarArticulos: tool({
-        description: 'Busca artículos o notas en el sitio web. Se puede buscar por un término clave y opcionalmente filtrar por una localidad.',
+        description: 'Busca artículos o notas en el sitio web por un término clave.',
         inputSchema: z.object({
           busqueda: z.string().describe('La palabra o frase a buscar en los artículos. Por ejemplo: "gastronomía", "humita".'),
-          localidad: z.string().optional().describe('Filtra los artículos por una localidad específica. Por ejemplo: "San Javier".')
         }),
-        execute: async ({ busqueda, localidad }) => {
-          // Reutilizamos el mismo mapa de localidades
-          const localidadMap = {
-            'san miguel de tucumán': 1,
-            'yerba buena': 58,
-            'tafí del valle': 51,
-            'el cadillal': 62,
-            'san javier': 56,
-          };
-          
+        execute: async ({ busqueda }) => {
           // Reemplaza '[URL_DE_TU_API]' si es diferente
           const baseUrl = 'https://tucumanturismo.gob.ar/api/v1/api/buscador';
           const params = new URLSearchParams();
@@ -46,17 +92,6 @@ export async function POST(req) {
           // Parámetro de búsqueda obligatorio
           params.append('busqueda', busqueda);
           
-          if (localidad) {
-            const normalizedLocalidad = localidad.toLowerCase();
-            const localidadId = localidadMap[normalizedLocalidad];
-            if (localidadId) {
-              params.append('localidad', localidadId.toString());
-            } else {
-              return { error: `La localidad "${localidad}" para filtrar artículos no es válida.` };
-            }
-          }
-
-          console.log(`Parámetros de la solicitud: ${params.toString()}`);
           const fullUrl = `${baseUrl}?${params.toString()}`;
           console.log(`Fetching Artículos: ${fullUrl}`);
 
@@ -73,10 +108,174 @@ export async function POST(req) {
           }
         },
       }),
+
+      ConsultarGuias: tool({
+        description: 'Busca guías tursiticos registrados. Se puede filtrar por el nombre del guía y/o por la localidad donde opera.',
+        inputSchema: z.object({
+          nombre: z.string().optional().describe('El nombre o parte del nombre del guía a buscar.'),
+          localidad: z.string().optional().describe('La localidad donde buscar al guía por una localidad específica de tucuman de esta lista: san miguel de tucumán, yerba buena, tafí del valle, el cadillal, san javier.')
+        }),
+        execute: async ({ nombre, localidad }) => {
+          // Se reutiliza y expande el mapa de localidades
+          const localidadMap = {
+            'san miguel de tucumán': 1,
+            'yerba buena': 58,
+            'tafí del valle': 51,
+            'el cadillal': 62,
+            'san javier': 56,
+            'concepción': 70, // Añadido desde el ejemplo de la API
+          };
+          
+          const baseUrl = 'https://tucumanturismo.gob.ar/api/v1/api/guias';
+          const params = new URLSearchParams();
+
+          // Parámetros hardcodeados
+          params.append('limit', '10');
+          params.append('offset', '0');
+          
+          // Parámetros que la IA puede modificar
+          if (nombre) {
+            params.append('nombre', nombre);
+          }
+          
+          if (localidad) {
+            const normalizedLocalidad = localidad.toLowerCase();
+            const localidadId = localidadMap[normalizedLocalidad];
+            if (localidadId) {
+              params.append('localidad', localidadId.toString());
+            } else {
+              return { error: `La localidad "${localidad}" para buscar guías no es válida.` };
+            }
+          }
+
+          const fullUrl = `${baseUrl}?${params.toString()}`;
+          console.log(`Fetching Guías: ${fullUrl}`);
+
+          try {
+            const response = await fetch(fullUrl);
+            if (!response.ok) {
+              throw new Error(`Error de red: ${response.statusText}`);
+            }
+            const data = await response.json();
+            return data.result; 
+          } catch (error) {
+            console.error('Error al llamar a la API de guías:', error);
+            return { error: 'No se pudo conectar con el servicio de búsqueda de guías.' };
+          }
+        },
+      }),
+
+      // --- INICIO DE LA NUEVA HERRAMIENTA: ConsultarColectivos ---
+      ConsultarColectivos: tool({
+        description: 'Busca colectivos (autobuses) interurbanos. Se puede filtrar por la localidad de destino.',
+        inputSchema: z.object({
+          localidad: z.string().optional().describe('La localidad de destino para buscar itinerarios de colectivos por una localidad específica de tucuman de esta lista: san miguel de tucumán, yerba buena, tafí del valle, el cadillal, san javier.')
+        }),
+        execute: async ({ localidad }) => {
+          // Se reutiliza el mapa de localidades existente
+          const localidadMap = {
+            'san miguel de tucumán': 1,
+            'yerba buena': 58,
+            'tafí del valle': 51,
+            'el cadillal': 62,
+            'san javier': 56,
+            'concepción': 70,
+          };
+          
+          const baseUrl = 'https://tucumanturismo.gob.ar/api/v1/api/colectivos_it';
+          const params = new URLSearchParams();
+
+          // Parámetros hardcodeados que la IA no puede modificar
+          params.append('limit', '9');
+          params.append('offset', '0');
+          
+          // La IA solo puede modificar este parámetro
+          if (localidad) {
+            const normalizedLocalidad = localidad.toLowerCase();
+            const localidadId = localidadMap[normalizedLocalidad];
+            if (localidadId) {
+              params.append('localidad', localidadId.toString());
+            } else {
+              return { error: `La localidad "${localidad}" para buscar colectivos no es válida.` };
+            }
+          }
+
+          const fullUrl = `${baseUrl}?${params.toString()}`;
+          console.log(`Fetching Colectivos: ${fullUrl}`);
+
+          try {
+            const response = await fetch(fullUrl);
+            if (!response.ok) {
+              throw new Error(`Error de red: ${response.statusText}`);
+            }
+            const data = await response.json();
+            return data.result; 
+          } catch (error) {
+            console.error('Error al llamar a la API de colectivos:', error);
+            return { error: 'No se pudo conectar con el servicio de búsqueda de colectivos.' };
+          }
+        },
+      }),
       // --- FIN DE LA NUEVA HERRAMIENTA ---
 
+      ConsultarHoteles: tool({
+        description: 'Busca hoteles. Se puede filtrar por el número de estrellas (ej: 3, 4 o 5 estrellas) y por una localidad específica.',
+        inputSchema: z.object({
+          estrellas: z.number().optional().describe('El número de estrellas del hotel a buscar, por ejemplo: 1, 2, 3, 4, 5. El numero de estrellas corresponde a el nivel de calidad y precio del hotel siendo 1 el mas barato y 5 el mas caro.'),
+          localidad: z.string().optional().describe('La localidad donde buscar el hotel por una localidad específica de tucuman de esta lista: san miguel de tucumán, yerba buena, tafí del valle, el cadillal, san javier.')
+        }),
+        execute: async ({ estrellas, localidad }) => {
+          // Se reutiliza el mapa de localidades existente
+          const localidadMap = {
+            'san miguel de tucumán': 1,
+            'yerba buena': 58,
+            'tafí del valle': 51,
+            'el cadillal': 62,
+            'san javier': 56,
+          };
+          
+          // Reemplaza esto con la URL base real si es necesario
+          const baseUrl = 'https://tucumanturismo.gob.ar/api/v1/api/hoteles';
+          const params = new URLSearchParams();
+
+          // Parámetros hardcodeados que la IA no puede modificar
+          params.append('limit', '10');
+          params.append('offset', '0');
+          
+          // La IA puede modificar estos dos parámetros
+          if (estrellas) {
+            params.append('estrellas', estrellas.toString());
+          }
+          
+          if (localidad) {
+            const normalizedLocalidad = localidad.toLowerCase();
+            const localidadId = localidadMap[normalizedLocalidad];
+            if (localidadId) {
+              params.append('localidad', localidadId.toString());
+            } else {
+              return { error: `La localidad "${localidad}" para buscar hoteles no es válida.` };
+            }
+          }
+
+          const fullUrl = `${baseUrl}?${params.toString()}`;
+          console.log(`Fetching Hoteles: ${fullUrl}`);
+
+          try {
+            const response = await fetch(fullUrl);
+            if (!response.ok) {
+              throw new Error(`Error de red: ${response.statusText}`);
+            }
+            const data = await response.json();
+            return data.result; 
+          } catch (error) {
+            console.error('Error al llamar a la API de hoteles:', error);
+            return { error: 'No se pudo conectar con el servicio de búsqueda de hoteles.' };
+          }
+        },
+      }),
+
       ConsultarPrestadores: tool({
-        description: 'Consulta prestadores de servicios turísticos. Se puede filtrar por un término de búsqueda, una actividad específica (como kayak, trekking, etc.) o una localidad.',
+        description: 'Consulta prestadores de servicios turísticos No Alquiler de auto. Se puede filtrar por un término de búsqueda, una actividad específica (como kayak, trekking, etc.) o una localidad.',
         inputSchema: z.object({
           busqueda: z.string().optional().describe('Término de búsqueda general. Por ejemplo: "guía de montaña", "aventura".'),
           localidad: z.string().optional().describe('La localidad donde buscar el prestador. Por ejemplo: "Tafí del Valle", "El Cadillal".'),
@@ -91,7 +290,22 @@ export async function POST(req) {
             'san javier': 56,
           };
           const actividadMap = {
-            'kayak': 1, 'alta montaña': 2, 'cabalgata': 3, 'tirolesa': 4, 'trekking': 5, 'paracaidismo': 6, 'ciclismo': 7, 'mountain bike': 7, 'paseo en barco': 8, 'parapente': 10, 'rappel': 11, 'safari fotografico': 12, 'fotografia': 12, 'escalada': 13, 'canyoning': 14, 'senderismo': 15,
+            'kayak': 1, 
+            'alta montaña': 2, 
+            'cabalgata': 3, 
+            'tirolesa': 4, 
+            'trekking': 5, 
+            'paracaidismo': 6, 
+            'ciclismo': 7, 
+            'mountain bike': 7, 
+            'paseo en barco': 8, 
+            'parapente': 10, 
+            'rappel': 11, 
+            'safari fotografico': 12, 
+            'fotografia': 12, 
+            'escalada': 13, 
+            'canyoning': 14, 
+            'senderismo': 15,
           };
           const baseUrl = 'https://tucumanturismo.gob.ar/api/v1/api/prestadores';
           const params = new URLSearchParams();
@@ -108,7 +322,9 @@ export async function POST(req) {
             if (actividadId) { params.append('actividad', actividadId.toString()); } 
             else { return { error: `La actividad "${actividad}" no es válida.` }; }
           }
+          console.log(`Parámetros de la solicitud: ${params.toString()}`);
           const fullUrl = `${baseUrl}?${params.toString()}`;
+          console.log(`Fetching Prestadores: ${fullUrl}`);
           try {
             const response = await fetch(fullUrl);
             if (!response.ok) { throw new Error(`Error de red: ${response.statusText}`); }
@@ -119,6 +335,8 @@ export async function POST(req) {
           }
         },
       }),
+
+      //HAY QUE SACARLE TODOS LOS PARAMETROS QUE SOLO MUESTRE TODOS LOS AUTOS Y LISTO
       ConsultCars: tool({
         description: 'Consulta agencias de alquiler de autos. Se puede filtrar por el nombre de la agencia o por la localidad donde se encuentra.',
         inputSchema: z.object({
@@ -139,7 +357,9 @@ export async function POST(req) {
             if (localidadId) { params.append('localidad', localidadId.toString()); } 
             else { return { error: `La localidad "${localidad}" no es válida.` }; }
           }
+          console.log(`Parámetros de la solicitud: ${params.toString()}`);
           const fullUrl = `${baseUrl}?${params.toString()}`;
+          console.log(`Fetching Autos: ${fullUrl}`);
           try {
             const response = await fetch(fullUrl);
             if (!response.ok) { throw new Error(`Error de red: ${response.statusText}`); }
@@ -150,6 +370,7 @@ export async function POST(req) {
           }
         },
       }),
+
     },
   });
 
