@@ -11,7 +11,11 @@ import { z } from 'zod';
 export const maxDuration = 30;
 
 export async function POST(req) {
-  const { messages } = await req.json();
+  console.log(req);
+  const requesta = await req.json();
+  console.log(requesta);
+  const { messages } = requesta;
+  console.log("MENSAJES: ", messages);
 
   const result = streamText({
     model: openai('gpt-4o-mini'),
