@@ -1,0 +1,67 @@
+# ### Enviar un mensaje al chat básico
+
+# POST http://localhost:3000/api/fail
+# Content-Type: application/json
+
+# {
+#   "messages": [
+#     {
+#       "role": "user",
+#       "parts": [
+#         {
+#           "type": "text",
+#           "text": "¿Cuál es la capital de Argentina?"
+#         }
+#       ]
+#     }
+#   ]
+# }
+
+### Enviar mensaje con contexto de búsqueda fallida
+
+# Este request envía el historial de chat completo al endpoint /api/chat.
+# El último mensaje del 'assistant' simula una llamada a una herramienta que no encontró resultados (output: []).
+# La IA en el backend debería interpretar este fallo y utilizar una estrategia de búsqueda alternativa,
+# como la herramienta 'buscador_inDeepth', para responder a la consulta original del usuario.
+
+POST http://localhost:3000/api/fail
+Content-Type: application/json
+
+{
+  "messages": [
+    {
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "Viaje a Tafi"
+        }
+      ],
+      "id": "tUWODkmKQ441quuD"
+    },
+    {
+      "id": "L4jR2rjSL2C2VyVh",
+      "role": "assistant",
+      "parts": [
+        {
+          "type": "step-start"
+        },
+        {
+          "type": "tool-ConsultarPrestadores",
+          "toolCallId": "call_T0EWiOUMkuqs0iKQFLPi3i9g",
+          "state": "output-available",
+          "input": {
+            "busqueda": "viaje",
+            "localidad": "Tafí del Valle"
+          },
+          "output": [],
+          "callProviderMetadata": {
+            "openai": {
+              "itemId": "fc_68d16facd8408190837aa813d5087b9f014ad035dd6d4f11"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
